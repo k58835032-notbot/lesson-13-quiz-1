@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Hiragana ↔ Romaji Quiz (50
+  Questions)</title>
+
+<style>
+body{
+  font-family:"Hiragino Kaku Gothic Pro","Meiryo",sans-serif;
+  background:#fff;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding:40px;
+}
+h1{color:#b23b3b;}
+#quiz-container{
+  background:#fff;
+  border-radius:15px;
+  box-shadow:0 4px 12px rgba(0,0,0,.15);
+  padding:30px;
+  width:90%;
+  max-width:600px;
+  text-align:center;
+}
+.question{font-size:3em;margin-bottom:20px;}
+.option{
+  display:block;
+  background:#ffeaea;
+  border:none;
+  border-radius:10px;
+  padding:12px;
+  font-size:1.2em;
+  width:100%;
+  max-width:300px;
+  margin:10px auto;
+  cursor:pointer;
+}
+.option:hover{background:#f7b6b6;}
+#next{
+  display:none;
+  margin-top:20px;
+  background:#b23b3b;
+  color:#fff;
+  border:none;
+  border-radius:10px;
+  padding:10px 20px;
+  cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+<h1>Hiragana ↔ Romaji Quiz</h1>
+
+<div id="quiz-container">
+  <div id="q-num"></div>
+  <div class="question" id="question"></div>
+  <div id="options"></div>
+  <div id="message"></div>
+  <div id="motivation" style="font-size:1.2em; margin-top:10px;"></div>
+  <div id="gif-box" style="margin-top:15px"></div>
+  <button id="next">Next</button>
+</div>
+
+<script>
+/* ---------- Base kana ---------- */
+const baseQuestions = [
+  {h:"な",r:"na"},{h:"に",r:"ni"},{h:"ぬ",r:"nu"},{h:"ね",r:"ne"},{h:"の",r:"no"},
+  {h:"ま",r:"ma"},{h:"み",r:"mi"},{h:"む",r:"mu"},{h:"め",r:"me"},{h:"も",r:"mo"},
+  {h:"は",r:"ha"},{h:"ひ",r:"hi"},{h:"ふ",r:"fu"},{h:"へ",r:"he"},{h:"ほ",r:"ho"},
+  {h:"ば",r:"ba"},{h:"び",r:"bi"},{h:"ぶ",r:"bu"},{h:"べ",r:"be"},{h:"ぼ",r:"bo"},
+  {h:"ぱ",r:"pa"},{h:"ぴ",r:"pi"},{h:"ぷ",r:"pu"},{h:"ぺ",r:"pe"},{h:"ぽ",r:"po"},
+  {h:"や",r:"ya"},{h:"ゆ",r:"yu"},{h:"よ",r:"yo"},
+  {h:"ら",r:"ra"},{h:"り",r:"ri"},{h:"る",r:"ru"},{h:"れ",r:"re"},{h:"ろ",r:"ro"},
+  {h:"ん",r:"n"}, {h:"わ",r:"wa"},{h:"を",r:"wo"}
+];
+
+/* ---------- Yōon (small ゃゅょ) ---------- */
+const yoon = [
+  {h:"ちゃ",r:"chya"},{h:"ちゅ",r:"chyu"},{h:"ちょ",r:"chyo"},
+  {h:"しゃ",r:"shya"},{h:"しゅ",r:"shyu"},{h:"しょ",r:"shyo"},
+  {h:"にゃ",r:"nya"},{h:"にゅ",r:"nyu"},{h:"にょ",r:"nyo"},
+  {h:"みゃ",r:"mya"},{h:"みゅ",r:"myu"},{h:"みょ",r:"myo"},
+  {h:"じゃ",r:"ja"},{h:"じゅ",r:"ju"},{h:"じょ",r:"jo"},
+  {h:"ひゃ",r:"hya"},{h:"ひゅ",r:"hyu"},{h:"ひょ",r:"hyo"},
+  {h:"びゃ",r:"bya"},{h:"びゅ",r:"byu"},{h:"びょ",r:"byo"},
+  {h:"ぴゃ",r:"pya"},{h:"ぴゅ",r:"pyu"},{h:"ぴょ",r:"pyo"}
+];
+
+/* ---------- Big-kana counterparts ---------- */
+const bigKana = [
+  {h:"しや",r:"shiya"},{h:"しゆ",r:"shiyu"},{h:"しよ",r:"shiyo"},
+  {h:"ちや",r:"chiya"},{h:"ちゆ",r:"chiyu"},{h:"ちよ",r:"chiyo"},
+  {h:"にや",r:"niya"},{h:"にゆ",r:"niyu"},{h:"によ",r:"niyo"},
+  {h:"みや",r:"miya"},{h:"みゆ",r:"miyu"},{h:"みよ",r:"miyo"},
+  {h:"ひや",r:"hiya"},{h:"ひゆ",r:"hiyu"},{h:"ひよ",r:"hiyo"},
+  {h:"びや",r:"biya"},{h:"びゆ",r:"biyu"},{h:"びよ",r:"biyo"},
+  {h:"ぴや",r:"piya"},{h:"ぴゆ",r:"piyu"},{h:"ぴよ",r:"piyo"}
+];
+
+const all = [...baseQuestions, ...yoon, ...bigKana];
+
+/* ---------- Helpers ---------- */
+const shuffle = a => a.slice().sort(()=>Math.random()-0.5);
+const pick = a => a[Math.floor(Math.random()*a.length)];
+
+/* ---------- Build quiz ---------- */
+/* ---------- Build quiz (balanced, no deletions) ---------- */
+let questions = [];
+
+// Shuffle all available kana
+let pool = shuffle(all);
+
+// Repeat pool until we have at least 50 questions
+while (questions.length < 50) {
+  pool.forEach(q => {
+    if (questions.length < 50) {
+      questions.push({
+        ...q,
+        dir: Math.random() < 0.5 ? "toRomaji" : "toHiragana"
+      });
+    }
+  });
+}
+
+// Final shuffle to mix everything
+questions = shuffle(questions);
+
+
+/* ---------- State ---------- */
+let i=0, score=0;
+
+/* ---------- DOM ---------- */
+const qEl = document.getElementById("question");
+const oEl = document.getElementById("options");
+const mEl = document.getElementById("message");
+const motivationEl = document.getElementById("motivation");
+const gifBox = document.getElementById("gif-box");
+const nEl = document.getElementById("next");
+const numEl = document.getElementById("q-num");
+
+/* ---------- Logic ---------- */
+function show(){
+  oEl.innerHTML="";
+  mEl.textContent="";
+  motivationEl.textContent="";
+  gifBox.innerHTML="";
+  nEl.style.display="none";
+
+  const q = questions[i];
+  numEl.textContent = `Question ${i+1} / 50`;
+
+  let correct, pool;
+  if(q.dir==="toRomaji"){
+    qEl.textContent = q.h;
+    correct = q.r;
+    pool = all.map(x=>x.r);
+  }else{
+    qEl.textContent = q.r;
+    correct = q.h;
+    pool = all.map(x=>x.h);
+  }
+
+  shuffle([correct, ...shuffle(pool.filter(x=>x!==correct)).slice(0,3)])
+    .forEach(opt=>{
+      const b = document.createElement("button");
+      b.className = "option";
+      b.textContent = opt;
+      b.onclick = ()=>check(opt,correct);
+      oEl.appendChild(b);
+    });
+}
+
+function check(choice, correct){
+  document.querySelectorAll(".option").forEach(b=>b.disabled=true);
+  if(choice===correct){
+    score++;
+    mEl.textContent="✅ Correct!";
+  }else{
+    mEl.textContent=`❌ ${correct}`;
+  }
+  nEl.style.display="inline-block";
+}
+
+nEl.onclick = ()=>{
+  i++;
+  i < questions.length ? show() : finishGame();
+};
+
+function finishGame(){
+  qEl.textContent="🎉 Finished!";
+  numEl.textContent="";
+  oEl.innerHTML="";
+  nEl.style.display="none";
+
+  let text="", gif="";
+  if(score >= 21){
+    text="🌟 Excellent! You’re true kana master!";
+    gif="https://raw.githubusercontent.com/k58835032-notbot/lesson-9-morae/main/cool%20cute%20cat.gif";
+  }else if(score >= 12){
+    text="👍 Good job! Keep practicing!";
+    gif="https://raw.githubusercontent.com/k58835032-notbot/lesson-9-morae/main/cute%20cat%20walking.gif";
+  }else{
+    text="🌱 Don’t worry — practice makes perfect!";
+    gif="https://raw.githubusercontent.com/k58835032-notbot/lesson-9-morae/main/sad%20cute%20cat.gif";
+  }
+
+  mEl.textContent = `Score: ${score} / 50`;
+  motivationEl.textContent = text;
+  gifBox.innerHTML = `<img src="${gif}" style="max-width:200px;">`;
+}
+
+show();
+</script>
+</body>
+</html>
