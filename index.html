@@ -185,16 +185,19 @@ function check(choice, correct){
   nEl.style.display="inline-block";
 }
 
-nEl.onclick = ()=>{
+function nextHandler(){
   i++;
   i < questions.length ? show() : finishGame();
-};
+}
+
+nEl.onclick = nextHandler;
+
 
 function finishGame(){
+  nEl.style.display = "inline-block";
   qEl.textContent="🎉 Finished!";
   numEl.textContent="";
   oEl.innerHTML="";
-  nEl.style.display="none";
 
   let text="", gif="";
   if(score >= 21){
@@ -211,9 +214,49 @@ function finishGame(){
   mEl.textContent = `Score: ${score} / 50`;
   motivationEl.textContent = text;
   gifBox.innerHTML = `<img src="${gif}" style="max-width:200px;">`;
+
+  // 🔁 TURN NEXT INTO RETRY
+  nEl.textContent = "Retry";
+  nEl.style.display = "inline-block";
+  nEl.onclick = retryGame;
+}
+
+  
+  function retryGame(){
+  // reset state
+  i = 0;
+  score = 0;
+
+  // rebuild questions (new random 50)
+  questions = [];
+  let pool = shuffle(all);
+  while (questions.length < 50) {
+    pool.forEach(q => {
+      if (questions.length < 50) {
+        questions.push({
+          ...q,
+          dir: Math.random() < 0.5 ? "toRomaji" : "toHiragana"
+        });
+      }
+    });
+  }
+  questions = shuffle(questions);
+
+  // reset UI
+  mEl.textContent = "";
+  motivationEl.textContent = "";
+  gifBox.innerHTML = "";
+
+  // restore Next button
+  nEl.textContent = "Next";
+  nEl.style.display = "none";
+  nEl.onclick = nextHandler;
+
+  show();
 }
 
 show();
+
 </script>
 </body>
 </html>
